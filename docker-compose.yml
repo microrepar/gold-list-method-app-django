@@ -10,7 +10,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 5s
-      timeout: 60s
+      timeout: 120s
       retries: 5
     networks:
         - goldlist

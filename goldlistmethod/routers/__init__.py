@@ -1,0 +1,5 @@
+from goldlistmethod.routers import notebook_router
+from goldlistmethod.routers import pagesection_router
+from goldlistmethod.routers import sentencelabel_router
+from goldlistmethod.routers import sentencetranslation_router
+from goldlistmethod.routers import user_router
