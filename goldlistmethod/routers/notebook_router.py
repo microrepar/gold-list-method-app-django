@@ -1,16 +1,32 @@
 import datetime
-from typing import List, Optional
 import uuid
+from typing import List, Optional
+
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
-from ninja import Router, Schema
+from ninja import ModelSchema, Router, Schema
 from ninja.orm import create_schema
 
+from goldlistmethod.models.customuser import CustomUser
 from goldlistmethod.models.notebook import Notebook
+from goldlistmethod.models.pagesection import PageSection
 
 router = Router()
 
 NotebookSchema = create_schema(Notebook, depth=1)
+UserSchema = create_schema(CustomUser)
+PageSectionSchema = create_schema(PageSection)
+
+
+class NotebookSchemaOut(ModelSchema):
+    pagesection_list: List[PageSectionSchema] = [] # type: ignore
+    user: UserSchema # type: ignore
+
+    class Meta:
+        model = Notebook
+        fields = ['id', 'created_at', 'updated_at', 'name', 'sentence_list_size', 'days_period', 
+                  'foreign_idiom', 'mother_idiom',]
+
 
 class NotebookIn(Schema):
     id: Optional[uuid.UUID] = None
@@ -46,4 +62,19 @@ def find_by_field(request, payload: NotebookIn):
     filters = {k: v for k, v in payload.dict().items() if v is not None}
     if filters:
         return Notebook.objects.filter(**filters)
+    return Notebook.objects.filter(id=None)
+
+@router.post('/find_by_field/clean/', response=List[NotebookSchema])
+def find_by_field_clean(request, payload: NotebookIn):
+    filters = {k: v for k, v in payload.dict().items() if v is not None}
+    if filters:
+        return Notebook.objects.filter(**filters)
+    return Notebook.objects.filter(id=None)
+
+
+@router.post('/find_by_field/depth/', response=List[NotebookSchemaOut])
+def find_by_field_depth(request, payload: NotebookIn):
+    filters = {k: v for k, v in payload.dict().items() if v is not None}
+    if filters:
+        return Notebook.objects.filter(**filters).select_related('user').prefetch_related('pagesection_list')
     return Notebook.objects.filter(id=None)

@@ -22,6 +22,10 @@ class SentenceLabelIn(Schema):
     translation: Optional[str] = None
     memorialized: Optional[bool] = None
 
+class SentenceLabelUpdate(Schema):
+    translation: str
+    memorialized: bool
+
 
 @router.get('/', response=List[SentenceLabelSchema])
 def list_sentencelabel(request):
@@ -41,3 +45,12 @@ def find_by_field(request, payload: SentenceLabelFilterSchema):
     if filters:
         return SentenceLabel.objects.filter(**filters)
     return SentenceLabel.objects.filter(id=None)
+
+
+@router.put('/{sentencelabel_id}', response=SentenceLabelSchema)
+def update(request, sentencelabel_id: uuid.UUID, payload: SentenceLabelUpdate):
+    sentencelabel = get_object_or_404(SentenceLabel, id=sentencelabel_id)
+    for attr, value in payload.dict().items():
+        setattr(sentencelabel, attr, value)
+    sentencelabel.save()
+    return sentencelabel

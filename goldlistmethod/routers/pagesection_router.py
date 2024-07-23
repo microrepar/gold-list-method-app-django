@@ -1,19 +1,58 @@
+import contextlib
 import datetime
 import uuid
 from typing import List, Optional
 
 from django.db.models import Max, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404
-from ninja import Router, Schema
+from ninja import Router, Schema, ModelSchema
 from ninja.orm import create_schema
 
 from goldlistmethod.models import (GroupChoices, PageSection, SentenceLabel,
-                                   SentenceTranslation)
+                                   SentenceTranslation, Notebook)
 
 router = Router()
 
 PageSectionSchema = create_schema(PageSection)
+SentenceLabelSchema = create_schema(SentenceLabel, depth=1)
 SentenceTranslationSchema = create_schema(SentenceTranslation)
+NotebookSchema = create_schema(Notebook) 
+
+
+class PageSectionSchemaOut(ModelSchema):
+    sentencelabels: List[SentenceLabelSchema] = []  # type: ignore
+    notebook: NotebookSchema                        # type: ignore
+    created_by: Optional[PageSectionSchema] = None            # type: ignore
+
+    class Meta:
+        model = PageSection
+        fields = ['id', 'created_at', 'updated_at', 'page_number', 'group', 
+                  'distillation_at', 'distillated', 'distillation_actual', ]
+
+class SentenceTranslationSchemaIn(ModelSchema):
+    class Meta:
+        model = SentenceTranslation
+        fields = ['foreign_language_sentence', 'mother_language_sentence', 
+                  'foreign_language_idiom', 'mother_language_idiom', ]
+
+
+class SentenceLabelSchemaIn(Schema):
+    pagesection_id: Optional[uuid.UUID] = None
+    sentencetranslation: Optional[SentenceTranslationSchemaIn] = None
+    translation: Optional[str] = None
+    memorialized: Optional[bool] = None
+
+
+class PageSectionDepthIn(Schema):
+    created_at : datetime.date
+    page_number : Optional[int] = None
+    group : Optional[GroupChoices] = None
+    distillated : Optional[bool] = None
+    distillation_at : Optional[datetime.date] = None
+    distillation_actual : Optional[datetime.date] = None
+    notebook_id : uuid.UUID
+    created_by_id : Optional[uuid.UUID] = None
+    sentencelabels: Optional[List[SentenceLabelSchemaIn]] = []
 
 
 class PageSectionIn(Schema):
@@ -27,8 +66,13 @@ class PageSectionIn(Schema):
     distillation_actual : Optional[datetime.date] = None
     created_by_id : Optional[uuid.UUID] = None
 
+
 class LastPageNumberSchema(Schema):
     last_pagenumber : int
+
+
+class Error(Schema):
+    message: str
 
 
 @router.get('/', response=List[PageSectionSchema])
@@ -41,6 +85,46 @@ def list_pagesections(request):
 def registry(request, payload: PageSectionIn):
     pagesection = PageSection.objects.create(**payload.dict())
     return pagesection    
+
+
+@router.post('/depth/', response={200: PageSectionSchemaOut, 409: Error})
+def registry_depth(request, payload: PageSectionDepthIn):
+    payload_dict = payload.dict()
+    sentencelabels_dict = payload_dict.pop('sentencelabels')
+    pagesection = None
+    try:
+        pagesection = PageSection.objects.create(**payload_dict)
+    except Exception as error:
+        return  409, {'message': f'registry_depth error: PageSection create - {str(error)}'}
+    
+    for sl_dict in sentencelabels_dict:
+        st_dict = sl_dict.pop('sentencetranslation')
+        sentencetranslation = None
+        
+        with contextlib.suppress(Exception):
+            sentencetranslation = SentenceTranslation.objects.create(**st_dict)
+        
+        if not sentencetranslation:
+            try:
+                sentencetranslation = SentenceTranslation.objects.filter(
+                    foreign_language_sentence=st_dict['foreign_language_sentence'],
+                    foreign_language_idiom=st_dict['foreign_language_idiom'],
+                    mother_language_idiom=st_dict['mother_language_idiom']
+                ).first()
+            except Exception as error:
+                pagesection.delete()
+                return  409, {'message': f'registry_depth error: SentenceTranslation filter - {str(error)}'}            
+
+        try:
+            sl_dict['pagesection_id'] = pagesection.id
+            sl_dict['sentencetranslation_id'] = sentencetranslation.id
+
+            sentencelabel = SentenceLabel.objects.create(**sl_dict)
+        except Exception as error:
+            pagesection.delete() 
+            return 409, {'message': f'registry_depth error: SentenceLabel create - {str(error)}'}
+        
+    return pagesection
 
 
 @router.get('/get_sentencelabel_by/{notebook_id}/{group}', response=List[SentenceTranslationSchema])
@@ -60,6 +144,17 @@ def find_by_field(request, payload: PageSectionIn):
     return PageSection.objects.filter(id=None)
 
 
+@router.post('/find_by_field/depth/', response=List[PageSectionSchemaOut])
+def find_by_field_depth(request, payload: PageSectionIn):
+    filters = {k: v for k, v in payload.dict().items() if v is not None}
+    if filters:
+        return (PageSection.objects.filter(**filters)
+                .select_related('notebook', 'created_by')
+                .prefetch_related('sentencelabels')
+               )
+    return PageSection.objects.filter(id=None)
+
+
 @router.get('/get_last_pagenumber/', response=LastPageNumberSchema)
 def get_last_pagenumber(request, notebook_id: uuid.UUID):
     qs = PageSection.objects.filter(notebook__id=notebook_id)
@@ -74,3 +169,13 @@ def delete_pagesection(request, pagesection_id: uuid.UUID):
     pagesection: PageSection = get_object_or_404(PageSection, id=pagesection_id)
     pagesection.delete()
     return {'success': True}
+
+
+@router.put('/{pagesection_id}', response=PageSectionSchema)
+def update(request, pagesection_id: uuid.UUID, payload: PageSectionIn):
+    pagesection = get_object_or_404(PageSection, id=pagesection_id)
+    payload_dict = {k: v for k, v in payload.dict().items() if v}
+    for attr, value in payload_dict.items():
+        setattr(pagesection, attr, value)
+    pagesection.save()
+    return pagesection
