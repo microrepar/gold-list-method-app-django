@@ -1,5 +1,4 @@
 from django.contrib import admin
-
 from goldlistmethod.models import PageSection, SentenceLabel
 
 
@@ -15,7 +14,9 @@ class SentenceLabelTabularInline(admin.TabularInline):
 
 
 class PageSectionAdmin(admin.ModelAdmin):
-    list_display = ('notebook', 'page_number', 'group', 'created_at', 'distillation_at', 
+    list_per_page = 5
+    
+    list_display = ('id', 'notebook', 'page_number', 'group', 'created_at', 'distillation_at', 
                     'distillated', 'distillation_actual', 'created_by')
     list_display_links = ('notebook', 'page_number', 'group', 'distillation_at', 'distillated')
     editable = ('notebook', 'page_number', 'group', 'distillation_at', 'distillated')
