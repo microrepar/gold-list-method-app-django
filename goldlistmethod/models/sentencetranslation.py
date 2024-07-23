@@ -4,8 +4,8 @@ from setup.base_models.base_model import BaseModel
 
 
 class SentenceTranslation(BaseModel):
-    foreign_language_sentence = models.CharField(max_length=200, blank=False, null=False)
-    mother_language_sentence = models.CharField(max_length=200, blank=False, null=False)
+    foreign_language_sentence = models.CharField(max_length=200)
+    mother_language_sentence = models.CharField(max_length=200)
     foreign_language_idiom = models.CharField(max_length=200)
     mother_language_idiom = models.CharField(max_length=200)
 

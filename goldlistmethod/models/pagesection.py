@@ -11,11 +11,11 @@ class PageSection(BaseModel):
     notebook = models.ForeignKey('Notebook', on_delete=models.CASCADE, related_name='pagesection_list')
     page_number = models.IntegerField()
     group = models.CharField(max_length=2, choices=GroupChoices.choices, default='A')
-    distillation_at = models.DateField(null=True)
-    distillated = models.BooleanField(default=False)
+    distillation_at = models.DateField(null=True, blank=True)
+    distillated = models.BooleanField(null=True, blank=True)
     distillation_actual = models.DateField(null=True, blank=True)
 
-    created_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.ForeignKey('PageSection', on_delete=models.SET_NULL, null=True, blank=True)
         
     class Meta:
         verbose_name = 'Page Section'

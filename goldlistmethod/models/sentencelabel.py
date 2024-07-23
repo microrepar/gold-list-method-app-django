@@ -7,8 +7,8 @@ from .sentencetranslation import SentenceTranslation
 
 
 class SentenceLabel(BaseModel):    
-    sentencetranslation = models.ForeignKey(SentenceTranslation, on_delete=models.CASCADE)
-    pagesection = models.ForeignKey(PageSection, on_delete=models.CASCADE, related_name='sentence_list')
+    sentencetranslation = models.ForeignKey(SentenceTranslation, on_delete=models.PROTECT)
+    pagesection = models.ForeignKey(PageSection, on_delete=models.CASCADE, related_name='sentencelabels')
     translation = models.CharField(max_length=255, null=True, blank=True)
     memorialized = models.BooleanField(null=True, blank=True)
 
