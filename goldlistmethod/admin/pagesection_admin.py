@@ -14,7 +14,7 @@ class SentenceLabelTabularInline(admin.TabularInline):
 
 
 class PageSectionAdmin(admin.ModelAdmin):
-    list_per_page = 5
+    list_per_page = 6
     
     list_display = ('id', 'notebook', 'page_number', 'group', 'created_at', 'distillation_at', 
                     'distillated', 'distillation_actual', 'created_by')

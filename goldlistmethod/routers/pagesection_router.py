@@ -47,7 +47,7 @@ class PageSectionDepthIn(Schema):
     created_at : datetime.date
     page_number : Optional[int] = None
     group : Optional[GroupChoices] = None
-    distillated : Optional[bool] = None
+    distillated : Optional[bool] = False
     distillation_at : Optional[datetime.date] = None
     distillation_actual : Optional[datetime.date] = None
     notebook_id : uuid.UUID
@@ -61,7 +61,7 @@ class PageSectionIn(Schema):
     notebook_id : Optional[uuid.UUID] = None
     page_number : Optional[int] = None
     group : Optional[GroupChoices] = None
-    distillated : Optional[bool] = None
+    distillated : Optional[bool] = False
     distillation_at : Optional[datetime.date] = None
     distillation_actual : Optional[datetime.date] = None
     created_by_id : Optional[uuid.UUID] = None
@@ -87,7 +87,7 @@ def registry(request, payload: PageSectionIn):
     return pagesection    
 
 
-@router.post('/depth/', response={200: PageSectionSchemaOut, 409: Error})
+@router.post('/depth/', response={200: PageSectionSchemaOut, 422: Error})
 def registry_depth(request, payload: PageSectionDepthIn):
     payload_dict = payload.dict()
     sentencelabels_dict = payload_dict.pop('sentencelabels')
@@ -95,7 +95,7 @@ def registry_depth(request, payload: PageSectionDepthIn):
     try:
         pagesection = PageSection.objects.create(**payload_dict)
     except Exception as error:
-        return  409, {'message': f'registry_depth error: PageSection create - {str(error)}'}
+        return  422, {'message': f'registry_depth error: PageSection create - {str(error)}'}
     
     for sl_dict in sentencelabels_dict:
         st_dict = sl_dict.pop('sentencetranslation')
@@ -113,7 +113,7 @@ def registry_depth(request, payload: PageSectionDepthIn):
                 ).first()
             except Exception as error:
                 pagesection.delete()
-                return  409, {'message': f'registry_depth error: SentenceTranslation filter - {str(error)}'}            
+                return  422, {'message': f'registry_depth error: SentenceTranslation filter - {str(error)}'}            
 
         try:
             sl_dict['pagesection_id'] = pagesection.id
@@ -122,7 +122,7 @@ def registry_depth(request, payload: PageSectionDepthIn):
             sentencelabel = SentenceLabel.objects.create(**sl_dict)
         except Exception as error:
             pagesection.delete() 
-            return 409, {'message': f'registry_depth error: SentenceLabel create - {str(error)}'}
+            return 422, {'message': f'registry_depth error: SentenceLabel create - {str(error)}'}
         
     return pagesection
 

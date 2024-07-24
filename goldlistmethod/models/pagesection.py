@@ -12,7 +12,7 @@ class PageSection(BaseModel):
     page_number = models.IntegerField()
     group = models.CharField(max_length=2, choices=GroupChoices.choices, default='A')
     distillation_at = models.DateField(null=True, blank=True)
-    distillated = models.BooleanField(null=True, blank=True)
+    distillated = models.BooleanField(default=False)
     distillation_actual = models.DateField(null=True, blank=True)
 
     created_by = models.ForeignKey('PageSection', on_delete=models.SET_NULL, null=True, blank=True)
