@@ -48,12 +48,12 @@ def list_notebooks(request):
     return qs
 
 
-@router.post('/', response={200: NotebookIn, 500: Error})
+@router.post('/', response={200: NotebookIn, 422: Error})
 def registry(request, payload: NotebookIn):
     try:
         notebook = Notebook.objects.create(**payload.dict())
     except IntegrityError as error:
-        return 400, {'message': f'{error}'}
+        return 422, {'message': f'{error}'}
     return notebook
 
 
