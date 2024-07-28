@@ -29,6 +29,19 @@ class PageSectionSchemaOut(ModelSchema):
         fields = ['id', 'created_at', 'updated_at', 'page_number', 'group', 
                   'distillation_at', 'distillated', 'distillation_actual', ]
 
+
+class PageSectionIn(Schema):
+    id : Optional[uuid.UUID] = None
+    created_at : Optional[datetime.date] = None
+    notebook_id : Optional[uuid.UUID] = None
+    page_number : Optional[int] = None
+    group : Optional[GroupChoices] = None
+    distillated : Optional[bool] = False
+    distillation_at : Optional[datetime.date] = None
+    distillation_actual : Optional[datetime.date] = None
+    created_by_id : Optional[uuid.UUID] = None
+
+
 class SentenceTranslationSchemaIn(ModelSchema):
     class Meta:
         model = SentenceTranslation
@@ -55,16 +68,23 @@ class PageSectionDepthIn(Schema):
     sentencelabels: Optional[List[SentenceLabelSchemaIn]] = []
 
 
-class PageSectionIn(Schema):
-    id : Optional[uuid.UUID] = None
-    created_at : Optional[datetime.date] = None
-    notebook_id : Optional[uuid.UUID] = None
+class SentenceLabelUpdateIn(Schema):
+    id: uuid.UUID
+    pagesection_id: Optional[uuid.UUID] = None
+    sentencetranslation_id: Optional[uuid.UUID] = None
+    translation: Optional[str] = None
+    memorialized: Optional[bool] = None
+
+
+class PageSectionUpdateDepthIn(Schema):
     page_number : Optional[int] = None
     group : Optional[GroupChoices] = None
     distillated : Optional[bool] = False
     distillation_at : Optional[datetime.date] = None
     distillation_actual : Optional[datetime.date] = None
+    notebook_id : Optional[uuid.UUID] = None
     created_by_id : Optional[uuid.UUID] = None
+    sentencelabels: Optional[List[SentenceLabelUpdateIn]] = []
 
 
 class LastPageNumberSchema(Schema):
@@ -146,7 +166,7 @@ def find_by_field(request, payload: PageSectionIn):
 
 @router.post('/find_by_field/depth/', response=List[PageSectionSchemaOut])
 def find_by_field_depth(request, payload: PageSectionIn):
-    filters = {k: v for k, v in payload.dict().items() if v is not None}
+    filters = payload.dict(exclude_unset=True)
     if filters:
         return (PageSection.objects.filter(**filters)
                 .select_related('notebook', 'created_by')
@@ -174,8 +194,39 @@ def delete_pagesection(request, pagesection_id: uuid.UUID):
 @router.put('/{pagesection_id}', response=PageSectionSchema)
 def update(request, pagesection_id: uuid.UUID, payload: PageSectionIn):
     pagesection = get_object_or_404(PageSection, id=pagesection_id)
-    payload_dict = {k: v for k, v in payload.dict().items() if v}
-    for attr, value in payload_dict.items():
+    update_fields = payload.dict(exclude_unset=True)
+    for attr, value in update_fields.items():
         setattr(pagesection, attr, value)
     pagesection.save()
+    return pagesection
+
+
+@router.put('/depth/{pagesection_id}',  response={200: PageSectionSchemaOut, 422: Error, 404: Error})
+def update_depth(request, pagesection_id: uuid.UUID, payload: PageSectionUpdateDepthIn):
+    pagesection = None    
+    try:
+        pagesection = get_object_or_404(PageSection, id=pagesection_id)
+        
+        update_fields_dict = payload.dict(exclude_unset=True)
+        sentencelabels_dict = update_fields_dict.pop('sentencelabels')
+        for attr, value in update_fields_dict.items():
+            setattr(pagesection, attr, value)
+    
+        sl_obj_list = []
+        for sl_dict in sentencelabels_dict:
+            sentencelabel = get_object_or_404(SentenceLabel, id=sl_dict['id'])
+            sl_dict = {k: v for k, v in sl_dict.items() if v}
+            for attr, value in sl_dict.items():
+                setattr(sentencelabel, attr, value)
+            sl_obj_list.append(sentencelabel)
+    except Exception as error:        
+        return 404, {'message': f'{str(error)}'}
+
+    try:
+        for sl in sl_obj_list:
+            sl.save()
+        pagesection.save()
+    except Exception as error:
+        return 422, {'message': f'{str(error)}'}
+
     return pagesection
