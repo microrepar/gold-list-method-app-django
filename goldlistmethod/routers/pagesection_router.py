@@ -3,13 +3,14 @@ import datetime
 import uuid
 from typing import List, Optional
 
-from django.db.models import Max, OuterRef, Q, Subquery
+from django.db import IntegrityError
+from django.db.models import Exists, Max, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404
-from ninja import Router, Schema, ModelSchema
+from ninja import ModelSchema, Router, Schema
 from ninja.orm import create_schema
 
-from goldlistmethod.models import (GroupChoices, PageSection, SentenceLabel,
-                                   SentenceTranslation, Notebook)
+from goldlistmethod.models import (GroupChoices, Notebook, PageSection,
+                                   SentenceLabel, SentenceTranslation)
 
 router = Router()
 
@@ -114,27 +115,40 @@ def registry_depth(request, payload: PageSectionDepthIn):
     pagesection = None
     try:
         pagesection = PageSection.objects.create(**payload_dict)
-    except Exception as error:
+    except IntegrityError as error:
         return  422, {'message': f'registry_depth error: PageSection create - {str(error)}'}
     
+    existing_sentence_memo_list = []
+    existing_sentence_list = []
     for sl_dict in sentencelabels_dict:
         st_dict = sl_dict.pop('sentencetranslation')
-        sentencetranslation = None
         
-        with contextlib.suppress(Exception):
+        sentencetranslation = None
+        with contextlib.suppress(IntegrityError):
             sentencetranslation = SentenceTranslation.objects.create(**st_dict)
         
         if not sentencetranslation:
-            try:
-                sentencetranslation = SentenceTranslation.objects.filter(
-                    foreign_language_sentence=st_dict['foreign_language_sentence'],
-                    foreign_language_idiom=st_dict['foreign_language_idiom'],
-                    mother_language_idiom=st_dict['mother_language_idiom']
-                ).first()
-            except Exception as error:
-                pagesection.delete()
-                return  422, {'message': f'registry_depth error: SentenceTranslation filter - {str(error)}'}            
+            sentencetranslation = SentenceTranslation.objects.filter(
+                Q(foreign_language_sentence__iexact=st_dict['foreign_language_sentence']) &
+                Q(foreign_language_idiom__iexact=st_dict['foreign_language_idiom']) &
+                Q(mother_language_idiom__iexact=st_dict['mother_language_idiom'])
+            ).first()
 
+            if pagesection.group == GroupChoices.HEADLIST:            
+                if SentenceLabel.objects.filter(sentencetranslation=sentencetranslation, 
+                                                pagesection__notebook=pagesection.notebook, 
+                                                memorialized=True).exists():
+                    existing_sentence_memo_list.append(sentencetranslation.foreign_language_sentence)
+                
+                if SentenceLabel.objects.filter(Q(sentencetranslation=sentencetranslation) &
+                                                Q(pagesection__notebook=pagesection.notebook) &
+                                                ~Q(pagesection__group=GroupChoices.NEW_PAGE)
+                                                ).exists():
+                    existing_sentence_list.append(sentencetranslation.foreign_language_sentence)
+                
+                if existing_sentence_list or existing_sentence_memo_list:
+                    continue
+        
         try:
             sl_dict['pagesection_id'] = pagesection.id
             sl_dict['sentencetranslation_id'] = sentencetranslation.id
@@ -143,16 +157,49 @@ def registry_depth(request, payload: PageSectionDepthIn):
         except Exception as error:
             pagesection.delete() 
             return 422, {'message': f'registry_depth error: SentenceLabel create - {str(error)}'}
+    
+    if existing_sentence_list or existing_sentence_memo_list:
+        pagesection.delete()
+        messages = ''
+        if existing_sentence_list:
+            if len(existing_sentence_list) == 1:
+                messages = '\nThis phrase is about to be distilled on other page: \n' + '; '.join(existing_sentence_list)
+            else:
+                messages = '\nThese phrases are about to be distilled on other pages: \n' + '; '.join(existing_sentence_list)
+        
+        if existing_sentence_memo_list:
+            if len(existing_sentence_memo_list) == 1:
+                messages = '\nThis phrase have already been memorized: \n' + '; '.join(existing_sentence_memo_list)
+            else:
+                messages = '\nThese phrases have already been memorized: \n' + '; '.join(existing_sentence_memo_list)
+        
+        return 422, {'message': messages}
         
     return pagesection
 
 
 @router.get('/get_sentencelabel_by/{notebook_id}/{group}', response=List[SentenceTranslationSchema])
 def get_sentencelabel_by_group(request, notebook_id: uuid.UUID, group: str):
-    subquery = SentenceLabel.objects.filter(
-        pagesection__group=group,
-        pagesection__notebook_id=notebook_id
-    ).values('sentencetranslation_id')
+    if group == GroupChoices.NEW_PAGE:
+        np_group_filter = SentenceLabel.objects.filter(
+            pagesection__group=GroupChoices.NEW_PAGE,
+            pagesection__notebook_id=notebook_id).values('sentencetranslation_id')
+                 
+        distillated_false_subquery = SentenceLabel.objects.filter(
+            Q(pagesection__notebook_id=notebook_id) &
+            Q(pagesection__distillated=False) &
+            ~Q(pagesection__group=GroupChoices.NEW_PAGE) &
+            ~Q(memorialized=True)).values('sentencetranslation_id')
+
+        subquery = (SentenceLabel.objects.filter(sentencetranslation_id__in=np_group_filter)
+                  .exclude(sentencetranslation_id__in=distillated_false_subquery)).values('sentencetranslation_id')
+
+    else:
+        subquery = SentenceLabel.objects.filter(
+            pagesection__group=group,
+            pagesection__notebook_id=notebook_id
+        ).values('sentencetranslation_id')
+
     return SentenceTranslation.objects.filter(pk__in=Subquery(subquery))
 
 

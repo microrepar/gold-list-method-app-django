@@ -7,7 +7,7 @@ from .model_choices import GroupChoices
 
 
 class PageSection(BaseModel):    
-    created_at = models.DateField('Data cadastro', default=timezone.now)
+    created_at = models.DateField(default=timezone.now)
     notebook = models.ForeignKey('Notebook', on_delete=models.CASCADE, related_name='pagesection_list')
     page_number = models.IntegerField()
     group = models.CharField(max_length=2, choices=GroupChoices.choices, default='A')
@@ -20,6 +20,7 @@ class PageSection(BaseModel):
     class Meta:
         verbose_name = 'Page Section'
         verbose_name_plural = 'Page Sections'
+        unique_together = ('group', 'created_at', 'distillation_at',)
     
     def __str__(self) -> str:
         return f'page={self.page_number}, group{self.group}, distillation_at={self.distillation_at}'
