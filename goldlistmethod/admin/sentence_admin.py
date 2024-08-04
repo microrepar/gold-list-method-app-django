@@ -12,7 +12,7 @@ class SentenceTranslationAdmin(admin.ModelAdmin):
 
 
 class SentenceLabelAdmin(admin.ModelAdmin):
-    list_display = ('sentencetranslation', 'pagesection', 'created_at', 'translation', 'memorialized')
+    list_display = ('sentencetranslation', 'pagesection', 'created_at', 'translation', 'memorized')
 
 admin.site.register(SentenceTranslation, SentenceTranslationAdmin)
 admin.site.register(SentenceLabel, SentenceLabelAdmin)

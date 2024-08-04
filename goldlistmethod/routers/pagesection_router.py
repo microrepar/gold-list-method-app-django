@@ -54,7 +54,7 @@ class SentenceLabelSchemaIn(Schema):
     pagesection_id: Optional[uuid.UUID] = None
     sentencetranslation: Optional[SentenceTranslationSchemaIn] = None
     translation: Optional[str] = None
-    memorialized: Optional[bool] = None
+    memorized: Optional[bool] = None
 
 
 class PageSectionDepthIn(Schema):
@@ -74,7 +74,7 @@ class SentenceLabelUpdateIn(Schema):
     pagesection_id: Optional[uuid.UUID] = None
     sentencetranslation_id: Optional[uuid.UUID] = None
     translation: Optional[str] = None
-    memorialized: Optional[bool] = None
+    memorized: Optional[bool] = None
 
 
 class PageSectionUpdateDepthIn(Schema):
@@ -137,7 +137,7 @@ def registry_depth(request, payload: PageSectionDepthIn):
             if pagesection.group == GroupChoices.HEADLIST:            
                 if SentenceLabel.objects.filter(sentencetranslation=sentencetranslation, 
                                                 pagesection__notebook=pagesection.notebook, 
-                                                memorialized=True).exists():
+                                                memorized=True).exists():
                     existing_sentence_memo_list.append(sentencetranslation.foreign_language_sentence)
                 
                 if SentenceLabel.objects.filter(Q(sentencetranslation=sentencetranslation) &
@@ -189,7 +189,7 @@ def get_sentencelabel_by_group(request, notebook_id: uuid.UUID, group: str):
             Q(pagesection__notebook_id=notebook_id) &
             Q(pagesection__distillated=False) &
             ~Q(pagesection__group=GroupChoices.NEW_PAGE) &
-            ~Q(memorialized=True)).values('sentencetranslation_id')
+            ~Q(memorized=True)).values('sentencetranslation_id')
 
         subquery = (SentenceLabel.objects.filter(sentencetranslation_id__in=np_group_filter)
                   .exclude(sentencetranslation_id__in=distillated_false_subquery)).values('sentencetranslation_id')

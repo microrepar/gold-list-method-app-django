@@ -20,11 +20,11 @@ class SentenceLabelIn(Schema):
     sentencetranslation_id: uuid.UUID
     pagesection_id: uuid.UUID
     translation: Optional[str] = None
-    memorialized: Optional[bool] = None
+    memorized: Optional[bool] = None
 
 class SentenceLabelUpdate(Schema):
     translation: str
-    memorialized: bool
+    memorized: bool
 
 
 @router.get('/', response=List[SentenceLabelSchema])
