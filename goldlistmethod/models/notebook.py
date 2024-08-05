@@ -1,4 +1,4 @@
-from .customuser import CustomUser
+from usermanager.models import StudentUser
 from django.db import models
 
 from setup.base_models.base_model import BaseModel
@@ -23,7 +23,7 @@ class Notebook(BaseModel):
     )
     foreign_idiom = models.CharField(max_length=100, default='English')
     mother_idiom = models.CharField(max_length=100, default='Portuguese Brazil')
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notebook_list', null=True)
+    user = models.ForeignKey(StudentUser, on_delete=models.CASCADE, related_name='notebook_list', null=True)
 
     class Meta:
         verbose_name = 'Notebook'

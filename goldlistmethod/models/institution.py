@@ -2,12 +2,15 @@ import uuid
 
 from django.db import models
 
+from usermanager.models import User
 from setup.base_models.base_model import BaseModel
-from django.contrib.auth.models import User
 
 
 class Institution(BaseModel):
-    nome = models.CharField(max_length=255)    
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    # responsable_people = models.ManyToOneRel(AdminUser, on_delete=models.SET_NULL, related_name='institution')
+    # professors = models.ManyToOneRel(ProfessorUser, on_delete=models.SET_NULL, related_name='institution')
+    nome = models.CharField(max_length=255)
     max_qty_professor = models.IntegerField(default=1)
     max_qty_student = models.IntegerField(default=1)
     city = models.CharField(max_length=100)

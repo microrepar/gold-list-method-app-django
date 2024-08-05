@@ -7,14 +7,14 @@ from django.shortcuts import get_object_or_404
 from ninja import ModelSchema, Router, Schema
 from ninja.orm import create_schema
 
-from goldlistmethod.models.customuser import CustomUser
+from usermanager.models import User
 from goldlistmethod.models.notebook import Notebook
 from goldlistmethod.models.pagesection import PageSection
 
 router = Router()
 
 NotebookSchema = create_schema(Notebook, depth=1)
-UserSchema = create_schema(CustomUser)
+UserSchema = create_schema(User)
 PageSectionSchema = create_schema(PageSection)
 
 

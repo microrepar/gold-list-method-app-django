@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -39,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'goldlistmethod',
+    'usermanager',
     'ninja',
 ]
 
@@ -158,5 +160,8 @@ PASSWORD_HASHERS = [
     # ... outros algoritmos, se necessário
 ]
 
+# PROJECT_ROOT = os.path.dirname(__file__)
+# sys.path.insert(0, os.path.join(PROJECT_ROOT, '../apps'))
 
-AUTH_USER_MODEL = 'goldlistmethod.CustomUser'
+
+AUTH_USER_MODEL = 'usermanager.User'
