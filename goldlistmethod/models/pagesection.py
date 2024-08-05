@@ -3,10 +3,18 @@ from django.utils import timezone
 
 from setup.base_models.base_model import BaseModel
 
-from .model_choices import GroupChoices
+
+class PageSection(BaseModel):
+
+    class GroupChoices(models.TextChoices):
+        HEADLIST = 'A', 'HEADLIST'
+        B        = 'B', 'B'
+        C        = 'C', 'C'
+        D        = 'D', 'D'
+        NEW_PAGE = 'NP', 'NP'
+        REMOVED  = 'RM', 'RM'
 
 
-class PageSection(BaseModel):    
     created_at = models.DateField(default=timezone.now)
     notebook = models.ForeignKey('Notebook', on_delete=models.CASCADE, related_name='pagesection_list')
     page_number = models.IntegerField()

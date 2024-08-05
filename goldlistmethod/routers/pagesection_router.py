@@ -9,8 +9,8 @@ from django.shortcuts import get_object_or_404
 from ninja import ModelSchema, Router, Schema
 from ninja.orm import create_schema
 
-from goldlistmethod.models import (GroupChoices, Notebook, PageSection,
-                                   SentenceLabel, SentenceTranslation)
+from goldlistmethod.models import (Notebook, PageSection, SentenceLabel,
+                                   SentenceTranslation)
 
 router = Router()
 
@@ -36,7 +36,7 @@ class PageSectionIn(Schema):
     created_at : Optional[datetime.date] = None
     notebook_id : Optional[uuid.UUID] = None
     page_number : Optional[int] = None
-    group : Optional[GroupChoices] = None
+    group : Optional[PageSection.GroupChoices] = None
     distillated : Optional[bool] = False
     distillation_at : Optional[datetime.date] = None
     distillation_actual : Optional[datetime.date] = None
@@ -60,7 +60,7 @@ class SentenceLabelSchemaIn(Schema):
 class PageSectionDepthIn(Schema):
     created_at : datetime.date
     page_number : Optional[int] = None
-    group : Optional[GroupChoices] = None
+    group : Optional[PageSection.GroupChoices] = None
     distillated : Optional[bool] = False
     distillation_at : Optional[datetime.date] = None
     distillation_actual : Optional[datetime.date] = None
@@ -79,7 +79,7 @@ class SentenceLabelUpdateIn(Schema):
 
 class PageSectionUpdateDepthIn(Schema):
     page_number : Optional[int] = None
-    group : Optional[GroupChoices] = None
+    group : Optional[PageSection.GroupChoices] = None
     distillated : Optional[bool] = False
     distillation_at : Optional[datetime.date] = None
     distillation_actual : Optional[datetime.date] = None
@@ -134,7 +134,7 @@ def registry_depth(request, payload: PageSectionDepthIn):
                 Q(mother_language_idiom__iexact=st_dict['mother_language_idiom'])
             ).first()
 
-            if pagesection.group == GroupChoices.HEADLIST:            
+            if pagesection.group == PageSection.GroupChoices.HEADLIST:            
                 if SentenceLabel.objects.filter(sentencetranslation=sentencetranslation, 
                                                 pagesection__notebook=pagesection.notebook, 
                                                 memorized=True).exists():
@@ -142,7 +142,7 @@ def registry_depth(request, payload: PageSectionDepthIn):
                 
                 if SentenceLabel.objects.filter(Q(sentencetranslation=sentencetranslation) &
                                                 Q(pagesection__notebook=pagesection.notebook) &
-                                                ~Q(pagesection__group=GroupChoices.NEW_PAGE)
+                                                ~Q(pagesection__group=PageSection.GroupChoices.NEW_PAGE)
                                                 ).exists():
                     existing_sentence_list.append(sentencetranslation.foreign_language_sentence)
                 
@@ -180,15 +180,15 @@ def registry_depth(request, payload: PageSectionDepthIn):
 
 @router.get('/get_sentencelabel_by/{notebook_id}/{group}', response=List[SentenceTranslationSchema])
 def get_sentencelabel_by_group(request, notebook_id: uuid.UUID, group: str):
-    if group == GroupChoices.NEW_PAGE:
+    if group == PageSection.GroupChoices.NEW_PAGE:
         np_group_filter = SentenceLabel.objects.filter(
-            pagesection__group=GroupChoices.NEW_PAGE,
+            pagesection__group=PageSection.GroupChoices.NEW_PAGE,
             pagesection__notebook_id=notebook_id).values('sentencetranslation_id')
                  
         distillated_false_subquery = SentenceLabel.objects.filter(
             Q(pagesection__notebook_id=notebook_id) &
             Q(pagesection__distillated=False) &
-            ~Q(pagesection__group=GroupChoices.NEW_PAGE) &
+            ~Q(pagesection__group=PageSection.GroupChoices.NEW_PAGE) &
             ~Q(memorized=True)).values('sentencetranslation_id')
 
         subquery = (SentenceLabel.objects.filter(sentencetranslation_id__in=np_group_filter)

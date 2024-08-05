@@ -3,12 +3,26 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import MinValueValidator
 
-from .model_choices import ProfileChoices, StatusChoices
-
 
 class CustomUser(AbstractUser):
+        
+    class ProfileChoices(models.TextChoices):
+        A = 'A', 'Student'
+        P = 'P', 'Professor'
+        G = 'G', 'Admin'
+        R = 'R', 'Root'
+
+    class StatusChoices(models.TextChoices):
+        ACTIVE    = 'Active', 'Active'
+        INACTIVE  = 'Inactive', 'Inactive'
+        PENDING   = 'Pending', 'Pending'
+        SUSPENDED = 'Suspended', 'Suspended'
+        ARCHIVED  = 'Archived', 'Archived'
+        APPROVED  = 'Approved', 'Approved'
+    
     name = models.CharField(max_length=250, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
+    
     profile = models.CharField(max_length=1, choices=ProfileChoices.choices, default='A')
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default='Pending')
     password2 = models.CharField(max_length=128, null=True)
