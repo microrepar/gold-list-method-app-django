@@ -28,7 +28,7 @@
             - created_at: TimeStamp
             - updated_at: TimeStamp
             - created_by: User
-            - nome: String
+            - name: String
             - max_qty_professors: Integer
             - max_qty_students: Integer
             - max_qty_notebooks: Integer
