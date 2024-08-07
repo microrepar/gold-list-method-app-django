@@ -5,7 +5,8 @@ from ninja import NinjaAPI
 
 from goldlistmethod.routers import (notebook_router, pagesection_router,
                                     sentencelabel_router,
-                                    sentencetranslation_router, user_router)
+                                    sentencetranslation_router)
+from usermanager.routers import user_router
 
 api = NinjaAPI()
 

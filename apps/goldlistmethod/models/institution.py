@@ -7,10 +7,8 @@ from setup.base_models.base_model import BaseModel
 
 
 class Institution(BaseModel):
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    # responsable_people = models.ManyToOneRel(AdminUser, on_delete=models.SET_NULL, related_name='institution')
-    # professors = models.ManyToOneRel(ProfessorUser, on_delete=models.SET_NULL, related_name='institution')
-    nome = models.CharField(max_length=255)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
     max_qty_professor = models.IntegerField(default=1)
     max_qty_student = models.IntegerField(default=1)
     city = models.CharField(max_length=100)
@@ -25,4 +23,4 @@ class Institution(BaseModel):
     logo = models.ImageField(upload_to='institution_logos/', blank=True, null=True)
 
     def __str__(self):
-        return self.nome
+        return self.name

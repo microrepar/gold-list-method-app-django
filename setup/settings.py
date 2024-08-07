@@ -119,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 DATE_INPUT_FORMATS = ('%d/%m/%Y','%Y-%m-%d')
 
-LANGUAGE_CODE = 'pt-br'
+LANGUAGE_CODE = 'en'
 
 TIME_ZONE = 'America/Sao_Paulo'
 
@@ -160,8 +160,8 @@ PASSWORD_HASHERS = [
     # ... outros algoritmos, se necessário
 ]
 
-# PROJECT_ROOT = os.path.dirname(__file__)
-# sys.path.insert(0, os.path.join(PROJECT_ROOT, '../apps'))
+PROJECT_ROOT = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, '../apps'))
 
 
 AUTH_USER_MODEL = 'usermanager.User'

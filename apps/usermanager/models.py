@@ -1,5 +1,5 @@
 import streamlit_authenticator as stauth
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -25,7 +25,7 @@ class User(AbstractUser):
     created_by = models.ForeignKey('User', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     
-    profile = models.CharField(max_length=10, choices=ProfileChoices.choices, default=ProfileChoices.UNDEFINED)
+    profile = models.CharField(max_length=10, choices=ProfileChoices.choices, default=ProfileChoices.ROOT)
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.PENDING)
     password2 = models.CharField(max_length=128, null=True)
     repeat_password = models.CharField(max_length=128, null=True)
@@ -39,9 +39,12 @@ class User(AbstractUser):
         verbose_name = 'User'
         verbose_name_plural = 'Users'
 
+    def __str__(self):
+        return self.username
+
 
 class AdminUser(User):
-    responsible_institution = models.ForeignKey('goldlistmethod.Institution', on_delete=models.SET_NULL, null=True, blank=True, related_name='responsable_people')
+    responsible_institution = models.ForeignKey('goldlistmethod.Institution', verbose_name='Responsible by', on_delete=models.PROTECT, related_name='responsible_people')
 
     class Meta:
         verbose_name = 'Administrator'
@@ -49,11 +52,16 @@ class AdminUser(User):
       
     def save(self, *args, **kwargs):
         self.profile = User.ProfileChoices.ADMIN
+        self.is_staff = True
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+        if is_new:
+            default_group, created = Group.objects.get_or_create(name='Admin')
+            self.groups.add(default_group)
 
 
 class ProfessorUser(User):
-    workplace = models.ForeignKey('goldlistmethod.Institution', on_delete=models.SET_NULL, null=True, blank=True, related_name='professors')
+    workplace = models.ForeignKey('goldlistmethod.Institution', on_delete=models.PROTECT, related_name='professors')
     
     class Meta:
         verbose_name = 'Professor'
@@ -61,11 +69,16 @@ class ProfessorUser(User):
 
     def save(self, *args, **kwargs):
         self.profile = User.ProfileChoices.PROFESSOR
+        self.is_staff = True
+        is_new = self.pk is None
         super().save(*args, **kwargs)
-
+        if is_new:
+            default_group, created = Group.objects.get_or_create(name='Professor')
+            self.groups.add(default_group)
 
 
 class StudentUser(User):
+    student_classroom = models.ForeignKey('goldlistmethod.ClassRoom', on_delete=models.PROTECT, related_name='students')
 
     class Meta:
         verbose_name = 'Student'
@@ -73,4 +86,9 @@ class StudentUser(User):
       
     def save(self, *args, **kwargs):
         self.profile = User.ProfileChoices.STUDENT
+        self.is_staff = True
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+        if is_new:
+            default_group, created = Group.objects.get_or_create(name='Student')
+            self.groups.add(default_group)

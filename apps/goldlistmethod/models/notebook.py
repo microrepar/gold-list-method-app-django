@@ -1,11 +1,13 @@
-from usermanager.models import StudentUser
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from usermanager.models import StudentUser, User
 
 from setup.base_models.base_model import BaseModel
-from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class Notebook(BaseModel):
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
     name = models.CharField(max_length=200)
     sentence_list_size = models.IntegerField(
         default=20,
@@ -23,7 +25,7 @@ class Notebook(BaseModel):
     )
     foreign_idiom = models.CharField(max_length=100, default='English')
     mother_idiom = models.CharField(max_length=100, default='Portuguese Brazil')
-    user = models.ForeignKey(StudentUser, on_delete=models.CASCADE, related_name='notebook_list', null=True)
+    user = models.ForeignKey(StudentUser, verbose_name='Student', on_delete=models.CASCADE, related_name='notebook_list', null=True)
 
     class Meta:
         verbose_name = 'Notebook'
