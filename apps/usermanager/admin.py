@@ -49,7 +49,7 @@ class CustomUserAdmin(UserAdmin):
     ordering = ('profile', 'username',)
 
     def get_group_list(self, obj):
-        return " | ".join([g.name for g in obj.groups.all()])
+        return " | ".join([g.name for g in obj.groups.all()]) or 'Undefined'
     get_group_list.short_description = 'Groups'
 
     def get_profile(self, obj):
@@ -68,13 +68,13 @@ class CustomUserAdmin(UserAdmin):
 
     def get_list_display(self, request):
         if '/usermanager/adminuser/' in request.path:
-            return ('username', 'profile', 'get_group_list', 'get_profile', 'created_by', 'responsible_institution', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'date_joined')
+            return ('username', 'profile', 'get_group_list', 'get_profile', 'created_by', 'is_superuser', 'is_staff', 'responsible_institution', 'email', 'first_name', 'last_name', 'date_joined')
         if '/usermanager/professoruser/' in request.path:
-            return ('username', 'profile', 'get_group_list', 'get_profile', 'created_by', 'workplace', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'date_joined')
+            return ('username', 'profile', 'get_group_list', 'get_profile', 'created_by', 'is_superuser', 'is_staff', 'workplace', 'email', 'first_name', 'last_name', 'date_joined')
         if '/usermanager/studentuser/' in request.path:
-            return ('username', 'profile', 'get_group_list', 'get_profile', 'created_by', 'student_classroom', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'date_joined')
+            return ('username', 'profile', 'get_group_list', 'get_profile', 'created_by', 'is_superuser', 'is_staff', 'student_classroom', 'email', 'first_name', 'last_name', 'date_joined')
         else:
-            return ['username', 'profile', 'get_group_list', 'get_profile', 'created_by', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'date_joined']
+            return ['username', 'profile', 'get_group_list', 'get_profile', 'created_by', 'is_superuser', 'is_staff', 'email', 'first_name', 'last_name', 'date_joined']
 
     def get_search_fields(self, request: HttpRequest) -> list[str]:
         if '/usermanager/adminuser/' in request.path:
