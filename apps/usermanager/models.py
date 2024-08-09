@@ -39,6 +39,12 @@ class User(AbstractUser):
         verbose_name = 'User'
         verbose_name_plural = 'Users'
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.created_by:
+            self.created_by = self
+            super().save(*args, **kwargs)
+
     def __str__(self):
         return self.username
 
@@ -56,7 +62,7 @@ class AdminUser(User):
         is_new = self.pk is None
         super().save(*args, **kwargs)
         if is_new:
-            default_group, created = Group.objects.get_or_create(name='Admin')
+            default_group, created = Group.objects.get_or_create(name='RootAdmin')
             self.groups.add(default_group)
 
 
@@ -75,6 +81,12 @@ class ProfessorUser(User):
         if is_new:
             default_group, created = Group.objects.get_or_create(name='Professor')
             self.groups.add(default_group)
+    
+    def __str__(self):
+        institution = ''
+        if self.workplace:
+            institution = ' - ' + self.workplace.abbr
+        return f'{self.username}{institution}'
 
 
 class StudentUser(User):

@@ -7,27 +7,15 @@ from goldlistmethod.models.classroom import ClassRoom
 from usermanager.models import AdminUser, ProfessorUser, User
 
 
-class ClassRoomAdminForm(forms.ModelForm):
-    class Meta:
-        model = ClassRoom
-        exclude = ['created_by', 'institution']
-
-
 class ClassRoomRootUserAdminForm(forms.ModelForm):
     class Meta:
         model = ClassRoom
         exclude = ['created_by']
 
 
-class ClassRoomProfessorUserAdminForm(forms.ModelForm):
-    class Meta:
-        model = ClassRoom
-        exclude = ['created_by', 'institution', 'professor']
-
-
 class ClassRoomAdmin(admin.ModelAdmin):
-    list_display = ('created_by', 'institution', 'professor', 'name', 'room_number', 'equipment', 'is_available', 'description',)
-    
+    list_display = ('name', 'room_number', 'professor', 'institution', 'equipment', 'is_available', 'description', 'created_by',)
+
     def save_model(self, request, obj, form, change):        
         if not obj.created_by_id:
             obj.created_by = request.user
@@ -42,11 +30,48 @@ class ClassRoomAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
     
     def get_form(self, request, obj=None, **kwargs):
-        Form = ClassRoomAdminForm
-        if request.user.profile == request.user.ProfileChoices.ROOT:
+        if request.user.profile == request.user.ProfileChoices.ADMIN:
+            user = AdminUser.objects.filter(id=request.user.id).first()
+            institution_id = user.responsible_institution.id
+            qs_institution = user.responsible_institution.__class__.objects.filter(id=institution_id)
+            class ClassRoomAdminForm(forms.ModelForm):
+                institution = forms.ModelChoiceField(queryset=qs_institution, 
+                                                     initial=user.responsible_institution)
+                class Meta:
+                    model = ClassRoom
+                    exclude = ['created_by']
+                
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.fields['institution'].disabled = True
+
+            Form = ClassRoomAdminForm
+            
+        elif request.user.profile == request.user.ProfileChoices.ROOT:
             Form = ClassRoomRootUserAdminForm
-        if request.user.profile == request.user.ProfileChoices.PROFESSOR:
+        
+        elif request.user.profile == request.user.ProfileChoices.PROFESSOR:
+            qs_professoruser = ProfessorUser.objects.filter(id=request.user.id)
+            professoruser = qs_professoruser.first()
+            institution_id = professoruser.workplace.id
+            qs_institution = professoruser.workplace.__class__.objects.filter(id=institution_id)
+            class ClassRoomProfessorUserAdminForm(forms.ModelForm):
+                institution = forms.ModelChoiceField(queryset=qs_institution, 
+                                                     initial=professoruser.workplace)
+                professor = forms.ModelChoiceField(queryset=qs_professoruser, 
+                                                     initial=professoruser)
+                class Meta:
+                    model = ClassRoom
+                    exclude = ['created_by',]
+                
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.fields['institution'].disabled = True
+                    self.fields['professor'].disabled = True
+
             Form = ClassRoomProfessorUserAdminForm        
+        else:
+            Form
         kwargs['form'] = Form
         return super().get_form(request, obj, **kwargs)
     
